@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+# Download and launch the Gradle distribution without requiring the wrapper JAR.
+set -eu
+APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+DIST_URL=$(sed -n 's/^distributionUrl=//p' "$APP_HOME/gradle/wrapper/gradle-wrapper.properties" | sed 's/\\:/:/g')
+DIST_NAME=$(basename "$DIST_URL" .zip)
+GRADLE_USER_HOME=${GRADLE_USER_HOME:-"$HOME/.gradle"}
+DIST_ROOT="$GRADLE_USER_HOME/wrapper/dists/$DIST_NAME/manual"
+ZIP="$DIST_ROOT/$DIST_NAME.zip"
+mkdir -p "$DIST_ROOT"
+
+# The archive's top-level folder is commonly gradle-8.11.1, not
+# gradle-8.11.1-all. Find the actual Gradle executable after extraction.
+find_gradle() {
+  find "$DIST_ROOT" -type f -path '*/bin/gradle' -perm -u+x 2>/dev/null | head -n 1
+}
+GRADLE_BIN=$(find_gradle || true)
+if [ -z "$GRADLE_BIN" ]; then
+  if command -v curl >/dev/null 2>&1; then
+    curl -fL --retry 3 "$DIST_URL" -o "$ZIP"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -O "$ZIP" "$DIST_URL"
+  else
+    echo "Gradle distribution requires curl or wget." >&2
+    exit 1
+  fi
+  unzip -q -o "$ZIP" -d "$DIST_ROOT"
+  rm -f "$ZIP"
+  GRADLE_BIN=$(find_gradle || true)
+fi
+if [ -z "$GRADLE_BIN" ] || [ ! -x "$GRADLE_BIN" ]; then
+  echo "Could not find Gradle executable after extracting $DIST_URL." >&2
+  exit 1
+fi
+exec "$GRADLE_BIN" -p "$APP_HOME" "$@"
