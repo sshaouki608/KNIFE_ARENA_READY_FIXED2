@@ -1,0 +1,6 @@
+KNIFE ARENA project package
+Flutter/Dart + Flame
+Android platform: v2 embedding
+Target API: 35 (Android 15)
+Package ID: com.knifearena.app
+See BUILD_NOTES_AR.md before building.
